@@ -4,6 +4,7 @@
 
 package com.googlecode.flickrjandroid.uploader;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -77,57 +78,13 @@ public class Uploader {
      * @throws SAXException
      */
     public String upload(String imageName, byte[] data, UploadMetaData metaData) throws FlickrException, IOException, SAXException {
-        List<Parameter> parameters = new ArrayList<Parameter>();
-        parameters.add(new Parameter(OAuthInterface.PARAM_OAUTH_CONSUMER_KEY, this.apiKey));
-        String title = metaData.getTitle();
-        if (title != null)
-            parameters.add(new Parameter("title", title));
-
-        String description = metaData.getDescription();
-        if (description != null)
-            parameters.add(new Parameter("description", description));
-
-        Collection<String> tags = metaData.getTags();
-        if (tags != null)
-            parameters.add(new Parameter("tags", StringUtilities.join(tags, " ")));
-
-        parameters.add(new Parameter("is_public", metaData.isPublicFlag() ? "1" : "0"));
-        parameters.add(new Parameter("is_family", metaData.isFamilyFlag() ? "1" : "0"));
-        parameters.add(new Parameter("is_friend", metaData.isFriendFlag() ? "1" : "0"));
-
-        parameters.add(new ImageParameter(imageName, data));
-
-        if (metaData.isHidden() != null) {
-            parameters.add(new Parameter("hidden", metaData.isHidden().booleanValue() ? "1" : "0"));
-        }
-
-        if (metaData.getSafetyLevel() != null) {
-            parameters.add(new Parameter("safety_level", metaData.getSafetyLevel()));
-        }
-
-        parameters.add(new Parameter("async", metaData.isAsync() ? "1" : "0"));
-
-        if (metaData.getContentType() != null) {
-            parameters.add(new Parameter("content_type", metaData.getContentType()));
-        }
-        OAuthUtils.addOAuthToken(parameters);
-
-        UploaderResponse response = (UploaderResponse) transport.upload(sharedSecret, parameters);
-        if (response.isError()) {
-            throw new FlickrException(response.getErrorCode(), response.getErrorMessage());
-        }
-        String id = "";
-        if (metaData.isAsync()) {
-            id = response.getTicketId();
-        } else {
-            id = response.getPhotoId();
-        }
-        return id;
+        return upload(imageName, (Object) data, metaData, null);
     }
 
     /**
      * Upload a photo from an InputStream.
      *
+     * @param imageName
      * @param in
      * @param metaData
      * @return photoId for sync mode or ticketId for async mode
@@ -136,47 +93,23 @@ public class Uploader {
      * @throws SAXException
      */
     public String upload(String imageName, InputStream in, UploadMetaData metaData) throws IOException, FlickrException, SAXException {
-        List<Parameter> parameters = new ArrayList<Parameter>();
-        parameters.add(new Parameter(OAuthInterface.PARAM_OAUTH_CONSUMER_KEY, this.apiKey));
+        return upload(imageName, in, metaData, null);
+    }
 
-        String title = metaData.getTitle();
-        if (title != null)
-            parameters.add(new Parameter("title", title));
-
-        String description = metaData.getDescription();
-        if (description != null)
-            parameters.add(new Parameter("description", description));
-
-        Collection<String> tags = metaData.getTags();
-        if (tags != null) {
-            parameters.add(new Parameter("tags", StringUtilities.join(tags, " ")));
-        }
-
-        parameters.add(new Parameter("is_public", metaData.isPublicFlag() ? "1" : "0"));
-        parameters.add(new Parameter("is_family", metaData.isFamilyFlag() ? "1" : "0"));
-        parameters.add(new Parameter("is_friend", metaData.isFriendFlag() ? "1" : "0"));
-        parameters.add(new Parameter("async", metaData.isAsync() ? "1" : "0"));
-        if (metaData.getSafetyLevel() != null) {
-            parameters.add(new Parameter("safety_level", metaData.getSafetyLevel()));
-        }
-        if (metaData.getContentType() != null) {
-            parameters.add(new Parameter("content_type", metaData.getContentType()));
-        }
-
-        parameters.add(new ImageParameter(imageName, in));
-        OAuthUtils.addOAuthToken(parameters);
-
-        UploaderResponse response = (UploaderResponse) transport.upload(sharedSecret, parameters);
-        if (response.isError()) {
-            throw new FlickrException(response.getErrorCode(), response.getErrorMessage());
-        }
-        String id = "";
-        if (metaData.isAsync()) {
-            id = response.getTicketId();
-        } else {
-            id = response.getPhotoId();
-        }
-        return id;
+    /**
+     * Upload a photo from a file.
+     *
+     * @param imageName
+     * @param file
+     * @param metaData
+     * @param callback
+     * @return photoId for sync mode or ticketId for async mode
+     * @throws IOException
+     * @throws FlickrException
+     * @throws SAXException
+     */
+    public String upload(String imageName, File file, UploadMetaData metaData, ProgressCallback callback) throws IOException, FlickrException, SAXException {
+        return upload(imageName, (Object) file, metaData, callback);
     }
 
     /**
@@ -243,6 +176,54 @@ public class Uploader {
         }
         String id = "";
         if (async) {
+            id = response.getTicketId();
+        } else {
+            id = response.getPhotoId();
+        }
+        return id;
+    }
+
+
+    private String upload(String imageName, Object in, UploadMetaData metaData, ProgressCallback callback) throws IOException, FlickrException, SAXException {
+        List<Parameter> parameters = new ArrayList<Parameter>();
+        parameters.add(new Parameter(OAuthInterface.PARAM_OAUTH_CONSUMER_KEY, this.apiKey));
+
+        String title = metaData.getTitle();
+        if (title != null)
+            parameters.add(new Parameter("title", title));
+
+        String description = metaData.getDescription();
+        if (description != null)
+            parameters.add(new Parameter("description", description));
+
+        Collection<String> tags = metaData.getTags();
+        if (tags != null) {
+            parameters.add(new Parameter("tags", StringUtilities.join(tags, " ")));
+        }
+
+        parameters.add(new Parameter("is_public", metaData.isPublicFlag() ? "1" : "0"));
+        parameters.add(new Parameter("is_family", metaData.isFamilyFlag() ? "1" : "0"));
+        parameters.add(new Parameter("is_friend", metaData.isFriendFlag() ? "1" : "0"));
+        parameters.add(new Parameter("async", metaData.isAsync() ? "1" : "0"));
+        if (metaData.isHidden() != null) {
+            parameters.add(new Parameter("hidden", metaData.isHidden() ? "1" : "0"));
+        }
+        if (metaData.getSafetyLevel() != null) {
+            parameters.add(new Parameter("safety_level", metaData.getSafetyLevel()));
+        }
+        if (metaData.getContentType() != null) {
+            parameters.add(new Parameter("content_type", metaData.getContentType()));
+        }
+
+        parameters.add(new ImageParameter(imageName, in));
+        OAuthUtils.addOAuthToken(parameters);
+        UploaderResponse response = (UploaderResponse) transport.upload(sharedSecret, parameters, callback);
+
+        if (response.isError()) {
+            throw new FlickrException(response.getErrorCode(), response.getErrorMessage());
+        }
+        String id = "";
+        if (metaData.isAsync()) {
             id = response.getTicketId();
         } else {
             id = response.getPhotoId();

@@ -5,6 +5,8 @@ package com.googlecode.flickrjandroid;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Flickr Response object.
@@ -12,6 +14,8 @@ import org.json.JSONObject;
  * @author Anthony Eden
  */
 public class RESTResponse implements Response {
+
+    private static final Logger logger = LoggerFactory.getLogger(RESTResponse.class);
 
     private String stat;
     
@@ -35,16 +39,21 @@ public class RESTResponse implements Response {
      */
     @Override
     public void parse(String rawMessage) throws JSONException {
-        this.rawResponse = rawMessage;
-        this.jsonObj = new JSONObject(rawMessage);
-        stat = this.jsonObj.getString("stat");
-        if ("ok".equals(stat)) {
-            
-        } else if ("fail".equals(stat)) {
-            this.errorCode = this.jsonObj.getString("code");
-            this.errorMessage = this.jsonObj.getString("message");
+		try {
+            this.rawResponse = rawMessage;
+            this.jsonObj = new JSONObject(rawMessage);
+            stat = this.jsonObj.getString("stat");
+            if ("ok".equals(stat)) {
+
+            } else if ("fail".equals(stat)) {
+                this.errorCode = this.jsonObj.getString("code");
+                this.errorMessage = this.jsonObj.getString("message");
+            }
+        } catch (JSONException e) {
+            logger.error("JSONException on " + rawMessage);
+            throw e;
         }
-    }
+	}
 
     public String getStat() {
         return stat;

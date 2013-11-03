@@ -3,16 +3,11 @@
  */
 package com.googlecode.flickrjandroid;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -21,6 +16,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import com.googlecode.flickrjandroid.uploader.ProgressCallback;
 import org.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -175,6 +171,9 @@ public class REST extends Transport {
             }
 
             return buf.toString();
+		} catch (IOException e) {
+			logger.error(e.getClass().getSimpleName(), e);
+			throw e;
         } finally {
             IOUtilities.close(in);
             IOUtilities.close(rd);
@@ -208,12 +207,20 @@ public class REST extends Transport {
         }
         return result;
     }
-    
+
+    private int reportProgress(ProgressCallback callback, int progress) {
+        if(callback != null) {
+            callback.reportProgress(progress);
+        }
+
+        return progress;
+    }
+
     /* (non-Javadoc)
      * @see com.googlecode.flickrjandroid.Transport#sendUpload(java.lang.String, java.util.List)
      */
     @Override
-    protected Response sendUpload(String path, List<Parameter> parameters)
+    protected Response sendUpload(String path, List<Parameter> parameters, ProgressCallback callback)
             throws IOException, FlickrException, SAXException {
         if (logger.isDebugEnabled()) {
             logger.debug("Send Upload Input Params: path '{}'; parameters {}", path, parameters);
@@ -221,6 +228,7 @@ public class REST extends Transport {
         HttpURLConnection conn = null;
         DataOutputStream out = null;
         String data = null;
+        reportProgress(callback, 0);
         try {
             URL url = UrlUtilities.buildPostUrl(getHost(), getPort(), path);
             if (logger.isDebugEnabled()) {
@@ -237,12 +245,12 @@ public class REST extends Transport {
             out = new DataOutputStream(conn.getOutputStream());
             boundary = "--" + boundary;
             out.writeBytes(boundary);
-            Iterator<?> iter = parameters.iterator();
-            while (iter.hasNext()) {
-                Parameter p = (Parameter) iter.next();
-                writeParam(p, out, boundary);
+            for (Parameter p : parameters) {
+                writeParam(p, out, boundary, callback);
             }
             out.writeBytes("--\r\n\r\n");
+
+            reportProgress(callback, 100);
             out.flush();
             out.close();
 
@@ -337,8 +345,8 @@ public class REST extends Transport {
         BufferedReader reader = null;
         try {
             reader = new BufferedReader(new InputStreamReader(input));
-            StringBuffer buffer = new StringBuffer();
-            String line = null;
+            StringBuilder buffer = new StringBuilder();
+            String line;
             while ((line = reader.readLine()) != null) {
                 buffer.append(line);
             }
@@ -378,7 +386,7 @@ public class REST extends Transport {
         if (parameters == null || parameters.isEmpty()) {
             return "";
         }
-        StringBuffer buf = new StringBuffer();
+        StringBuilder buf = new StringBuilder();
         for (int i = 0; i < parameters.size(); i++) {
             if (i != 0) {
                 buf.append("&");
@@ -390,7 +398,7 @@ public class REST extends Transport {
         return buf.toString();
     }
     
-    private void writeParam(Parameter param, DataOutputStream out, String boundary)
+    private void writeParam(Parameter param, DataOutputStream out, String boundary, ProgressCallback callback)
             throws IOException {
         String name = param.getName();
         out.writeBytes("\r\n");
@@ -402,9 +410,26 @@ public class REST extends Transport {
             if (value instanceof InputStream) {
                 InputStream in = (InputStream) value;
                 byte[] buf = new byte[512];
-                int res = -1;
+                int res;
                 while ((res = in.read(buf)) != -1) {
                     out.write(buf,0,res);
+                }
+            } else if(value instanceof File) {
+                FileInputStream in = new FileInputStream((File)value);
+                try {
+                    long length = ((File)value).length();
+                    int totalSent = 0;
+                    byte[] buf = new byte[512];
+
+                    int res;
+                    while ((res = in.read(buf)) != -1) {
+                        out.write(buf,0,res);
+                        out.flush();
+                        totalSent += res;
+                        reportProgress(callback, (int)((totalSent / (float) length) * 100));
+                    }
+                } finally {
+                    in.close();
                 }
             } else if (value instanceof byte[]) {
                 out.write((byte[]) value);

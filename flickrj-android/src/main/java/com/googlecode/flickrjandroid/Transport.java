@@ -6,6 +6,7 @@ package com.googlecode.flickrjandroid;
 import java.io.IOException;
 import java.util.List;
 
+import com.googlecode.flickrjandroid.uploader.ProgressCallback;
 import org.json.JSONException;
 import org.xml.sax.SAXException;
 
@@ -79,11 +80,11 @@ public abstract class Transport {
     protected abstract Response post(String path, List<Parameter> parameters) throws IOException, JSONException;
     
     public Response upload(String apiSharedSecret, 
-            List<Parameter> parameters) throws IOException, FlickrException, SAXException {
+            List<Parameter> parameters, ProgressCallback callback) throws IOException, FlickrException, SAXException {
 //    	parameters.add(new Parameter("nojsoncallback", "1"));
 //		parameters.add(new Parameter("format", "json"));
         OAuthUtils.addOAuthParams(apiSharedSecret, Uploader.URL_UPLOAD, parameters);
-        return sendUpload(Uploader.UPLOAD_PATH, parameters);
+        return sendUpload(Uploader.UPLOAD_PATH, parameters, callback);
     }
     
     public Response replace(String apiSharedSecret, 
@@ -91,10 +92,10 @@ public abstract class Transport {
 //    	parameters.add(new Parameter("nojsoncallback", "1"));
 //		parameters.add(new Parameter("format", "json"));
         OAuthUtils.addOAuthParams(apiSharedSecret, Uploader.URL_REPLACE, parameters);
-        return sendUpload(Uploader.REPLACE_PATH, parameters);
+        return sendUpload(Uploader.REPLACE_PATH, parameters, null);
     }
     
-    protected abstract Response sendUpload(String path, List<Parameter> parameters) throws IOException, FlickrException, SAXException;
+    protected abstract Response sendUpload(String path, List<Parameter> parameters, ProgressCallback callback) throws IOException, FlickrException, SAXException;
     
     public Response postJSON(String apiSharedSecret, 
             List<Parameter> parameters) throws IOException, JSONException, FlickrException {

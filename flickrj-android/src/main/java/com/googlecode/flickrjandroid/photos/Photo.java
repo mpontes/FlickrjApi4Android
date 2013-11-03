@@ -14,6 +14,7 @@ import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.Locale;
 
 import com.googlecode.flickrjandroid.FlickrException;
 import com.googlecode.flickrjandroid.people.User;
@@ -33,7 +34,7 @@ public class Photo implements Serializable {
 
     private static final ThreadLocal<DateFormat> DATE_FORMATS = new ThreadLocal<DateFormat>() {
         protected synchronized DateFormat initialValue() {
-            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
         }
     };
 
@@ -89,6 +90,7 @@ public class Photo implements Serializable {
     private int rotation;
     private Collection<Note> notes;
     private Collection<Tag> tags;
+	private Collection<String> machineTags;
     private Collection<PhotoUrl> urls;
     private String iconServer;
     private String iconFarm;
@@ -331,6 +333,14 @@ public class Photo implements Serializable {
     public void setTags(Collection<Tag> tags) {
         this.tags = tags;
     }
+
+	public void setMachineTags(Collection<String> machineTags) {
+		this.machineTags = machineTags;
+	}
+
+	public Collection<String> getMachineTags() {
+		return machineTags;
+	}
 
     /**
      *

@@ -273,6 +273,20 @@ public final class PhotoUtils {
             photo.setTags(new ArrayList<Tag>());
         }
 
+		try {
+			List<String> tags = new ArrayList<String>();
+			Object obj = photoElement.opt("machine_tags");
+			if (obj instanceof String) {
+				String tagsAttr = obj.toString().trim();
+				String[] values = tagsAttr.split(" ");
+				for (int i = 0; i < values.length; i++) {
+					tags.add(values[i]);
+				}
+			}
+			photo.setMachineTags(tags);
+		} catch (NullPointerException e) {
+			photo.setMachineTags(new ArrayList<String>());
+		}
         /*
          * try { Element urlsElement = (Element)
          * photoElement.getElementsByTagName("urls").item(0); List<PhotoUrl>

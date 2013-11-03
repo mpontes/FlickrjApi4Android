@@ -48,6 +48,8 @@ public class PhotosetsInterface {
 	public static final String METHOD_GET_PHOTOS = "flickr.photosets.getPhotos";
 	public static final String METHOD_ORDER_SETS = "flickr.photosets.orderSets";
 	public static final String METHOD_REMOVE_PHOTO = "flickr.photosets.removePhoto";
+	public static final String METHOD_REORDER_PHOTOS = "flickr.photosets.reorderPhotos";
+	public static final String METHOD_SET_PRIMARY_PHOTO = "flickr.photosets.setPrimaryPhoto";
 
 	private String apiKey;
 	private String sharedSecret;
@@ -428,11 +430,11 @@ public class PhotosetsInterface {
 		}
 		
 		if (perPage > 0) {
-			parameters.add(new Parameter("per_page", new Integer(perPage)));
+			parameters.add(new Parameter("per_page", perPage));
 		}
 
 		if (page > 0) {
-			parameters.add(new Parameter("page", new Integer(page)));
+			parameters.add(new Parameter("page", page));
 		}
 
 		if (signed) {
@@ -506,11 +508,11 @@ public class PhotosetsInterface {
 		parameters.add(new Parameter("photoset_id", photosetId));
 
 		if (perPage > 0) {
-			parameters.add(new Parameter("per_page", new Integer(perPage)));
+			parameters.add(new Parameter("per_page", perPage));
 		}
 
 		if (page > 0) {
-			parameters.add(new Parameter("page", new Integer(page)));
+			parameters.add(new Parameter("page", page));
 		}
 
 		if (privacyFilter > 0) {
@@ -618,6 +620,34 @@ public class PhotosetsInterface {
 	}
 
 	/**
+	 * Set the order in which photos in a set are returned for the user.
+	 *
+	 * This method requires authentication with 'write' permission.
+	 *
+	 * @param photosetId
+	 *            The photoset ID
+     * @param photoIds
+     *            A list of photo IDs
+	 * @throws IOException
+	 * @throws FlickrException
+	 * @throws JSONException
+	 */
+	public void reorderPhotos(String photosetId, List<String> photoIds) throws IOException, FlickrException, JSONException {
+		List<Parameter> parameters = new ArrayList<Parameter>();
+		parameters.add(new Parameter("method", METHOD_REORDER_PHOTOS));
+		parameters.add(new Parameter(OAuthInterface.PARAM_OAUTH_CONSUMER_KEY, apiKey));
+
+		parameters.add(new Parameter("photoset_id", photosetId));
+		parameters.add(new Parameter("photo_ids", StringUtilities.join(photoIds, ",")));
+		OAuthUtils.addOAuthToken(parameters);
+
+		Response response = transportAPI.postJSON(sharedSecret, parameters);
+		if (response.isError()) {
+			throw new FlickrException(response.getErrorCode(), response.getErrorMessage());
+		}
+	}
+
+	/**
 	 * Remove a photo from the set.
 	 * 
 	 * @param photosetId
@@ -645,5 +675,20 @@ public class PhotosetsInterface {
 					response.getErrorMessage());
 		}
 	}
+
+    public void setPrimaryPhoto(String photosetId, String photoId) throws IOException, FlickrException, JSONException {
+        List<Parameter> parameters = new ArrayList<Parameter>();
+        parameters.add(new Parameter("method", METHOD_SET_PRIMARY_PHOTO));
+        parameters.add(new Parameter(OAuthInterface.PARAM_OAUTH_CONSUMER_KEY, apiKey));
+
+        parameters.add(new Parameter("photoset_id", photosetId));
+        parameters.add(new Parameter("photo_id", photoId));
+        OAuthUtils.addOAuthToken(parameters);
+
+        Response response = transportAPI.postJSON(sharedSecret, parameters);
+        if (response.isError()) {
+            throw new FlickrException(response.getErrorCode(), response.getErrorMessage());
+        }
+    }
 
 }
